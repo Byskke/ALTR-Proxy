@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ALTR-Proxy — Trading Card Sheet Generator</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <map name="github">
+            <area
+                shape="rect"
+                coords="0,0,40,40"
+                href="https://github.com/Byskke/ALTR-Proxy"
+                alt=""
+            />
+        </map>
+        <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            :root {
+                --ink: #111;
+                --ink-2: #555;
+                --ink-3: #999;
+                --bg: #fafaf8;
+                --surface: #fff;
+                --border: #e8e8e4;
+                --border-hover: #ccc;
+                --accent: #111;
+                --accent-soft: #f0f0ec;
+                --radius: 6px;
+                --card-w: 88mm;
+                --card-h: 63mm;
+            }
+
+            body {
+                font-family: "DM Sans", sans-serif;
+                background: var(--bg);
+                color: var(--ink);
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* ── NAV ── */
+            nav {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 1.25rem 2.5rem;
+                border-bottom: 1px solid var(--border);
+                background: var(--surface);
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+            .logo {
+                font-weight: 500;
+                font-size: 1rem;
+                letter-spacing: -0.02em;
+            }
+            .logo span {
+                color: var(--ink-3);
+                font-weight: 300;
+            }
+            .nav-info {
+                font-size: 0.78rem;
+                color: var(--ink-3);
+                font-family: "DM Mono", monospace;
+            }
+            .github {
+                margin-left: 0.5rem;
+                margin-right: 0.5rem;
+            }
+
+            /* ── LAYOUT ── */
+            .app {
+                display: grid;
+                grid-template-columns: 360px 1fr;
+                flex: 1;
+                min-height: 0;
+            }
+
+            /* ── SIDEBAR ── */
+            .sidebar {
+                border-right: 1px solid var(--border);
+                background: var(--surface);
+                padding: 2rem 1.75rem;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
+            }
+
+            .section-label {
+                font-size: 0.7rem;
+                font-family: "DM Mono", monospace;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: var(--ink-3);
+                margin-bottom: 0.75rem;
+            }
+
+            /* Decklist */
+            .decklist-header {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                margin-bottom: 0.6rem;
+            }
+            .decklist-title {
+                font-size: 1rem;
+                font-weight: 500;
+                letter-spacing: -0.02em;
+                color: var(--ink);
+            }
+            .decklist-hint {
+                font-size: 0.7rem;
+                font-family: "DM Mono", monospace;
+                color: var(--ink-3);
+            }
+            .decklist-textarea {
+                width: 100%;
+                height: 180px;
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 0.75rem;
+                font-family: "DM Mono", monospace;
+                font-size: 0.78rem;
+                color: var(--ink);
+                resize: vertical;
+                line-height: 1.7;
+                transition: border-color 0.15s;
+            }
+            .decklist-textarea::placeholder {
+                color: var(--ink-3);
+            }
+            .decklist-textarea:focus {
+                outline: none;
+                border-color: var(--ink);
+            }
+            .decklist-meta {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-top: 0.5rem;
+            }
+            .count-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                font-size: 0.78rem;
+                color: var(--ink-3);
+                font-family: "DM Mono", monospace;
+            }
+            .count-badge strong {
+                color: var(--ink);
+                font-weight: 500;
+            }
+            .parse-error {
+                font-size: 0.72rem;
+                color: #c0392b;
+                font-family: "DM Mono", monospace;
+            }
+
+            /* Settings */
+            .setting-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.6rem 0;
+                border-bottom: 1px solid var(--border);
+            }
+            .setting-row:last-child {
+                border-bottom: none;
+            }
+            .setting-label {
+                font-size: 0.82rem;
+                color: var(--ink-2);
+            }
+            .setting-value {
+                font-size: 0.82rem;
+                font-family: "DM Mono", monospace;
+                color: var(--ink);
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                padding: 0.2rem 0.5rem;
+                width: 90px;
+                text-align: right;
+            }
+            .setting-value:focus {
+                outline: none;
+                border-color: var(--ink);
+            }
+
+            /* Toggle */
+            .toggle-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.6rem 0;
+                border-bottom: 1px solid var(--border);
+            }
+            .toggle-label {
+                font-size: 0.82rem;
+                color: var(--ink-2);
+            }
+            .toggle {
+                width: 36px;
+                height: 20px;
+                background: var(--border-hover);
+                border-radius: 10px;
+                cursor: pointer;
+                position: relative;
+                transition: background 0.2s;
+                border: none;
+                flex-shrink: 0;
+            }
+            .toggle.active {
+                background: var(--ink);
+            }
+            .toggle::after {
+                content: "";
+                position: absolute;
+                width: 14px;
+                height: 14px;
+                background: white;
+                border-radius: 50%;
+                top: 3px;
+                left: 3px;
+                transition: transform 0.2s;
+            }
+            .toggle.active::after {
+                transform: translateX(16px);
+            }
+
+            /* Actions */
+            .btn {
+                width: 100%;
+                padding: 0.75rem 1.25rem;
+                border-radius: var(--radius);
+                font-family: "DM Sans", sans-serif;
+                font-size: 0.875rem;
+                font-weight: 500;
+                cursor: pointer;
+                transition:
+                    opacity 0.15s,
+                    transform 0.1s;
+                letter-spacing: -0.01em;
+            }
+            .btn:active {
+                transform: scale(0.99);
+            }
+            .btn-primary {
+                background: var(--ink);
+                color: white;
+                border: none;
+            }
+            .btn-primary:hover {
+                opacity: 0.82;
+            }
+            .btn-primary:disabled {
+                opacity: 0.3;
+                cursor: not-allowed;
+            }
+            .btn-secondary {
+                background: transparent;
+                color: var(--ink);
+                border: 1px solid var(--border-hover);
+            }
+            .btn-secondary:hover {
+                border-color: var(--ink);
+            }
+            .btn-secondary:disabled {
+                opacity: 0.3;
+                cursor: not-allowed;
+            }
+            .btn-group {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            /* Stats row */
+            .stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+            }
+            .stat-card {
+                background: var(--bg);
+                border-radius: var(--radius);
+                padding: 0.75rem;
+            }
+            .stat-card .val {
+                font-size: 1.25rem;
+                font-weight: 500;
+                font-family: "DM Mono", monospace;
+                color: var(--ink);
+            }
+            .stat-card .lbl {
+                font-size: 0.7rem;
+                color: var(--ink-3);
+                margin-top: 0.1rem;
+            }
+
+            /* ── MAIN PREVIEW ── */
+            .main {
+                padding: 2.5rem;
+                overflow-y: auto;
+                background: var(--bg);
+            }
+
+            .empty-state {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                min-height: 400px;
+                text-align: center;
+                gap: 1rem;
+            }
+            .empty-icon {
+                opacity: 0.15;
+            }
+            .empty-state h2 {
+                font-size: 1.1rem;
+                font-weight: 400;
+                color: var(--ink-2);
+            }
+            .empty-state p {
+                font-size: 0.82rem;
+                color: var(--ink-3);
+                max-width: 280px;
+                line-height: 1.6;
+            }
+
+            /* Sheet preview */
+            .sheets-container {
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
+                align-items: flex-start;
+            }
+
+            .sheet-wrap {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            .sheet-num {
+                font-size: 1rem;
+                font-family: "DM Mono", monospace;
+                color: var(--ink-3);
+            }
+
+            /* A4 sheet at ~50% scale for preview */
+            .sheet {
+                background: white;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+                border-radius: 3px;
+                overflow: hidden;
+                /* A4 = 210x297mm — displayed at 80% */
+                width: calc(210mm * 0.8);
+                height: calc(297mm * 0.8);
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(3, 1fr);
+                gap: 0;
+                position: relative;
+            }
+            .sheet.show-guides .card-slot {
+                outline: 1px dashed rgba(0, 0, 0, 0.12);
+            }
+
+            .card-slot {
+                position: relative;
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .card-slot img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            }
+            .card-slot.empty-slot {
+                background: var(--bg);
+            }
+            .card-slot .slot-num {
+                position: absolute;
+                bottom: 3px;
+                right: 4px;
+                font-size: 8px;
+                font-family: "DM Mono", monospace;
+                color: rgba(0, 0, 0, 0.18);
+                pointer-events: none;
+            }
+
+            /* Thumbnail strip */
+            .thumb-strip {
+                display: flex;
+                gap: 0.4rem;
+                flex-wrap: wrap;
+                margin-top: 0.25rem;
+            }
+            .thumb {
+                position: relative;
+                width: 44px;
+                height: 44px;
+                border-radius: 4px;
+                overflow: hidden;
+                border: 1.5px solid var(--border);
+                cursor: pointer;
+                transition: border-color 0.15s;
+                background: var(--bg);
+            }
+            .thumb:hover {
+                border-color: var(--ink);
+            }
+            .thumb img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .thumb .remove-btn {
+                position: absolute;
+                top: 1px;
+                right: 1px;
+                width: 14px;
+                height: 14px;
+                background: rgba(0, 0, 0, 0.65);
+                border-radius: 50%;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.15s;
+            }
+            .thumb:hover .remove-btn {
+                opacity: 1;
+            }
+            .remove-btn svg {
+                width: 7px;
+                height: 7px;
+                fill: white;
+            }
+
+            /* Progress */
+            .progress-bar {
+                height: 2px;
+                background: var(--border);
+                border-radius: 1px;
+                overflow: hidden;
+                margin-top: 0.5rem;
+            }
+            .progress-fill {
+                height: 100%;
+                background: var(--ink);
+                border-radius: 1px;
+                transition: width 0.3s;
+            }
+
+            /* Notification */
+            .notif {
+                position: fixed;
+                bottom: 1.5rem;
+                right: 1.5rem;
+                background: var(--ink);
+                color: white;
+                padding: 0.65rem 1.1rem;
+                border-radius: var(--radius);
+                font-size: 0.82rem;
+                opacity: 0;
+                transform: translateY(8px);
+                transition:
+                    opacity 0.25s,
+                    transform 0.25s;
+                pointer-events: none;
+                z-index: 999;
+            }
+            .notif.show {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            @media (max-width: 900px) {
+                .app {
+                    grid-template-columns: 1fr;
+                }
+                .sidebar {
+                    border-right: none;
+                    border-bottom: 1px solid var(--border);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <nav>
+            <div class="logo">
+                ALTR-Proxy <span>— card sheet generator</span>
+            </div>
+            <img
+                class="github"
+                src="assets/github-142-svgrepo-com.svg"
+                alt=""
+                width="40"
+                height="40"
+                usemap="#github"
+            />
+            <div class="nav-info">63 × 88 mm · A4 · 9 cards/sheet</div>
+        </nav>
+
+        <div class="app">
+            <!-- ── SIDEBAR ── -->
+            <aside class="sidebar">
+                <!-- Decklist -->
+                <div>
+                    <div class="decklist-header">
+                        <span class="decklist-title">Decklist</span>
+                        <span class="decklist-hint">1 card per line</span>
+                    </div>
+                    <textarea
+                        class="decklist-textarea"
+                        id="decklistInput"
+                        placeholder="1 ALT_CORE_B_AX_02_C&#10;3 ALT_CORE_B_BR_15_R2&#10;..."
+                        spellcheck="false"
+                    ></textarea>
+                    <div class="decklist-meta">
+                        <div class="count-badge">
+                            <strong id="imgCount">0</strong> card(s)
+                        </div>
+                        <span class="parse-error" id="parseError"></span>
+                    </div>
+                    <div class="progress-bar" style="margin-top: 0.5rem">
+                        <div
+                            class="progress-fill"
+                            id="progressFill"
+                            style="width: 0%"
+                        ></div>
+                    </div>
+                    <div class="thumb-strip" id="thumbStrip"></div>
+                </div>
+
+                <!-- Stats -->
+                <div>
+                    <p class="section-label">Summary</p>
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="val" id="statCards">0</div>
+                            <div class="lbl">cards</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="val" id="statPages">0</div>
+                            <div class="lbl">sheets</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div>
+                    <p class="section-label">PDF Settings</p>
+                    <div class="toggle-row">
+                        <span class="toggle-label">Cut guides in PDF</span>
+                        <button
+                            class="toggle"
+                            id="guidesToggle"
+                            title="Show cut guides"
+                        ></button>
+                    </div>
+                    <div class="toggle-row" style="border-bottom: none">
+                        <span class="toggle-label">Preview guides</span>
+                        <button
+                            class="toggle active"
+                            id="previewGuidesToggle"
+                            title="Guides in preview"
+                        ></button>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div>
+                    <p class="section-label">Export</p>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="btnPdf" disabled>
+                            Generate PDF
+                        </button>
+                        <button
+                            class="btn btn-secondary"
+                            id="btnClear"
+                            disabled
+                        >
+                            Clear all
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- ── MAIN ── -->
+            <main class="main" id="mainArea">
+                <div class="empty-state" id="emptyState">
+                    <svg
+                        class="empty-icon"
+                        width="64"
+                        height="64"
+                        viewBox="0 0 64 64"
+                        fill="none"
+                        stroke="#111"
+                        stroke-width="1.5"
+                    >
+                        <rect x="8" y="8" width="22" height="16" rx="2" />
+                        <rect x="34" y="8" width="22" height="16" rx="2" />
+                        <rect x="8" y="28" width="22" height="16" rx="2" />
+                        <rect x="34" y="28" width="22" height="16" rx="2" />
+                        <rect x="8" y="48" width="22" height="8" rx="2" />
+                        <rect x="34" y="48" width="22" height="8" rx="2" />
+                    </svg>
+                    <h2>No cards in decklist</h2>
+                    <p>
+                        Type your decklist on the left to preview the A4 sheets.
+                    </p>
+                </div>
+                <div
+                    class="sheets-container"
+                    id="sheetsContainer"
+                    style="display: none"
+                ></div>
+            </main>
+        </div>
+
+        <div class="notif" id="notif"></div>
+
+        <script>
+            const { jsPDF } = window.jspdf;
+
+            // cards = [{ name, qty, displayName }]
+            let cards = [];
+            let showPreviewGuides = true;
+            let showPdfGuides = false;
+
+            const lang = { EN: "EN", FR: "FR", ES: "ES", DE: "DE", IT: "IT" };
+            let currentLang = lang.EN;
+
+            const imgUrl = `https://img.altered-db.com/cards/${currentLang.toLowerCase()}/CORE/`;
+
+            const decklistInput = document.getElementById("decklistInput");
+            const imgCount = document.getElementById("imgCount");
+            const thumbStrip = document.getElementById("thumbStrip");
+            const progressFill = document.getElementById("progressFill");
+            const parseError = document.getElementById("parseError");
+            const statCards = document.getElementById("statCards");
+            const statPages = document.getElementById("statPages");
+            const btnPdf = document.getElementById("btnPdf");
+            const btnClear = document.getElementById("btnClear");
+            const emptyState = document.getElementById("emptyState");
+            const sheetsContainer = document.getElementById("sheetsContainer");
+            const guidesToggle = document.getElementById("guidesToggle");
+            const previewGuidesToggle = document.getElementById(
+                "previewGuidesToggle",
+            );
+            const notifEl = document.getElementById("notif");
+
+            // ── Parse decklist
+            // Accepted formats: "4 Card Name", "4x Card Name", "Card Name" (qty=1)
+            function parseDecklist(text) {
+                const lines = text
+                    .split("\n")
+                    .map((l) => l.trim())
+                    .filter(Boolean);
+                const result = [];
+                const errors = [];
+                lines.forEach((line, i) => {
+                    const m =
+                        line.match(/^(\d+)[xX]?\s+(.+)$/) ||
+                        line.match(/^(.+)$/);
+                    if (!m) {
+                        errors.push(`Line ${i + 1}`);
+                        return;
+                    }
+                    if (m[2]) {
+                        result.push({
+                            qty: parseInt(m[1], 10),
+                            name: m[2].trim(),
+                        });
+                    } else {
+                        result.push({ qty: 1, name: m[1].trim() });
+                    }
+                });
+                return { result, errors };
+            }
+
+            // Expand qty into individual card entries
+            function expandCards(parsed) {
+                const out = [];
+                parsed.forEach(({ qty, name }) => {
+                    for (let i = 0; i < qty; i++) out.push(name);
+                });
+                return out;
+            }
+
+            decklistInput.addEventListener("input", () => {
+                const { result, errors } = parseDecklist(decklistInput.value);
+                cards = expandCards(result);
+                parseError.textContent = errors.length
+                    ? `Unknown format: ${errors.join(", ")}`
+                    : "";
+                updateUI();
+            });
+
+            // ── Toggles
+            guidesToggle.addEventListener("click", () => {
+                showPdfGuides = !showPdfGuides;
+                guidesToggle.classList.toggle("active", showPdfGuides);
+            });
+            previewGuidesToggle.addEventListener("click", () => {
+                showPreviewGuides = !showPreviewGuides;
+                previewGuidesToggle.classList.toggle(
+                    "active",
+                    showPreviewGuides,
+                );
+                renderPreview();
+            });
+
+            function updateUI() {
+                const n = cards.length;
+                const pages = Math.ceil(n / 9);
+                imgCount.textContent = n;
+                statCards.textContent = n;
+                statPages.textContent = n > 0 ? pages : 0;
+                progressFill.style.width =
+                    n === 0
+                        ? "0%"
+                        : Math.min(100, ((n % 9 || 9) / 9) * 100) + "%";
+                btnPdf.disabled = n === 0;
+                btnClear.disabled = decklistInput.value.trim() === "";
+                renderThumbs();
+                renderPreview();
+                emptyState.style.display = n === 0 ? "flex" : "none";
+                sheetsContainer.style.display = n === 0 ? "none" : "flex";
+            }
+
+            function renderThumbs() {
+                thumbStrip.innerHTML = "";
+                // Show unique card names as pills
+                const unique = [...new Set(cards)];
+                unique.slice(0, 24).forEach((name) => {
+                    const pill = document.createElement("div");
+                    pill.style.cssText = `
+              display:inline-flex; align-items:center; gap:4px;
+              background:var(--bg); border:1px solid var(--border);
+              border-radius:4px; padding:2px 7px; margin:2px 2px 0 0;
+              font-size:0.7rem; font-family:'DM Mono',monospace; color:var(--ink-2);
+              white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;
+            `;
+                    const count = cards.filter((c) => c === name).length;
+                    pill.title = name;
+                    pill.textContent = `${count}× ${name}`;
+                    thumbStrip.appendChild(pill);
+                });
+                if (unique.length > 24) {
+                    const more = document.createElement("div");
+                    more.style.cssText =
+                        'font-size:0.7rem;color:var(--ink-3);font-family:"DM Mono",monospace;margin-top:4px;';
+                    more.textContent = `+${unique.length - 24} more…`;
+                    thumbStrip.appendChild(more);
+                }
+            }
+
+            function renderPreview() {
+                sheetsContainer.innerHTML = "";
+                const n = cards.length;
+                if (n === 0) return;
+                const pages = Math.ceil(n / 9);
+                for (let p = 0; p < pages; p++) {
+                    const wrap = document.createElement("div");
+                    wrap.className = "sheet-wrap";
+                    const num = document.createElement("div");
+                    num.className = "sheet-num";
+                    num.textContent = `Sheet ${p + 1} / ${pages}`;
+                    const sheet = document.createElement("div");
+                    sheet.className =
+                        "sheet" + (showPreviewGuides ? " show-guides" : "");
+                    for (let s = 0; s < 9; s++) {
+                        const idx = p * 9 + s;
+                        const slot = document.createElement("img");
+                        slot.className =
+                            "card-slot" + (idx >= n ? " empty-slot" : "");
+                        if (idx < n) {
+                            // Show card name as text placeholder
+                            const label = document.createElement("div");
+                            label.style.cssText = `
+                  font-size:12px; font-family:'DM Mono',monospace;
+                  color:var(--ink-3); text-align:center; padding:4px;
+                  word-break:break-word; line-height:1.4; pointer-events:none;
+                `;
+                            const img = imgUrl + `${cards[idx]}.webp`;
+
+                            label.textContent = cards[idx];
+                            slot.height = `298`;
+                            slot.width = `210`;
+                            slot.src = img;
+                            slot.appendChild(label);
+                        }
+                        const sn = document.createElement("span");
+                        sn.className = "slot-num";
+                        sn.textContent = idx < n ? idx + 1 : "";
+                        slot.appendChild(sn);
+                        sheet.appendChild(slot);
+                    }
+                    wrap.appendChild(num);
+                    wrap.appendChild(sheet);
+                    sheetsContainer.appendChild(wrap);
+                }
+            }
+
+            // ── PDF generation
+            btnPdf.addEventListener("click", async () => {
+                if (cards.length === 0) return;
+                btnPdf.disabled = true;
+                btnPdf.textContent = "Generating…";
+
+                const cardW = 63;
+                const cardH = 88;
+
+                const doc = new jsPDF({
+                    unit: "mm",
+                    format: "a4",
+                    orientation: "portrait",
+                });
+                const pages = Math.ceil(cards.length / 9);
+
+                for (let p = 0; p < pages; p++) {
+                    if (p > 0) doc.addPage();
+                    for (let r = 0; r < 3; r++) {
+                        for (let c = 0; c < 3; c++) {
+                            const idx = p * 9 + r * 3 + c;
+                            if (idx >= cards.length) continue;
+                            const x = 10.5 + c * cardW;
+                            const y = 16.5 + r * cardH;
+                            const logo = imgUrl + `${cards[idx]}.webp`;
+
+                            // Card placeholder rectangle
+                            doc.addImage(logo, "PNG", x, y, cardW, cardH);
+
+                            // Cut guides
+                            if (showPdfGuides) {
+                                doc.setDrawColor(180, 180, 180);
+                                doc.setLineWidth(0.2);
+                                doc.line(0, y, 210, y);
+                                doc.line(0, y + cardH, 210, y + cardH);
+                                doc.line(x, 0, x, 298);
+                                doc.line(x + cardW, 0, x + cardW, 298);
+                            }
+                        }
+                    }
+                }
+
+                doc.save("altr-proxy-sheets.pdf");
+                btnPdf.disabled = false;
+                btnPdf.textContent = "Generate PDF";
+                notify("PDF generated successfully!");
+            });
+
+            // ── Clear
+            btnClear.addEventListener("click", () => {
+                decklistInput.value = "";
+                cards = [];
+
+                parseError.textContent = "";
+                updateUI();
+                notify("Decklist cleared");
+            });
+
+            // ── Notifications
+            let notifTimer;
+            function notify(msg) {
+                notifEl.textContent = msg;
+                notifEl.classList.add("show");
+                clearTimeout(notifTimer);
+                notifTimer = setTimeout(
+                    () => notifEl.classList.remove("show"),
+                    2800,
+                );
+            }
+
+            updateUI();
+        </script>
+    </body>
+</html>
