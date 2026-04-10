@@ -4,6 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>ALTR-Proxy — Trading Card Sheet Generator</title>
+        <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
             href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"
@@ -668,7 +669,7 @@
             let currentLang = "en";
 
             const selectLang = document.getElementById("selectLang");
-            let imgUrl = `https://img.altered-db.com/cards`;
+            const imgUrl = "https://altr-proxy.netlify.app/cards";
             const decklistInput = document.getElementById("decklistInput");
             const imgCount = document.getElementById("imgCount");
             const thumbStrip = document.getElementById("thumbStrip");
@@ -825,9 +826,7 @@
                   color:var(--ink-3); text-align:center; padding:4px;
                   word-break:break-word; line-height:1.4; pointer-events:none;
                 `;
-                            const img =
-                                imgUrl +
-                                `/${currentLang}/${cards[idx].split("_")[1]}/${cards[idx]}.webp`;
+                            const img = `https://img.altered-db.com/cards/${currentLang}/${cards[idx].split("_")[1]}/${cards[idx]}.webp`;
 
                             label.textContent = cards[idx];
                             slot.height = `298`;
@@ -845,6 +844,20 @@
                     wrap.appendChild(sheet);
                     sheetsContainer.appendChild(wrap);
                 }
+            }
+
+            async function toBase64(url) {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64 = reader.result.split(",")[1];
+                        resolve(base64);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
             }
 
             // ── PDF generation
@@ -871,12 +884,11 @@
                             if (idx >= cards.length) continue;
                             const x = 10.5 + c * cardW;
                             const y = 16.5 + r * cardH;
-                            const logo =
-                                imgUrl +
-                                `/${currentLang}/${cards[idx].split("_")[1]}/${cards[idx]}.webp`;
+                            const url = `${imgUrl}/${currentLang}/${cards[idx].split("_")[1]}/${cards[idx]}.webp`;
+                            const base64 = await toBase64(url);
 
-                            // Card placeholder rectangle
-                            doc.addImage(logo, "PNG", x, y, cardW, cardH);
+                            // Card image
+                            doc.addImage(base64, "JPEG", x, y, cardW, cardH);
 
                             // Cut guides
                             if (showPdfGuides) {
