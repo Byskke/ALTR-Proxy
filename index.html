@@ -9,7 +9,10 @@
             href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"
             rel="stylesheet"
         />
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+            crossorigin="anonymous"
+        ></script>
         <map name="github">
             <area
                 shape="rect"
@@ -171,6 +174,9 @@
                 font-size: 0.72rem;
                 color: #c0392b;
                 font-family: "DM Mono", monospace;
+            }
+            .select-lang {
+                margin-bottom: 0.5rem;
             }
 
             /* Settings */
@@ -535,6 +541,13 @@
                         <span class="decklist-title">Decklist</span>
                         <span class="decklist-hint">1 card per line</span>
                     </div>
+                    <select id="selectLang" class="select-lang">
+                        <option value="en" selected>EN</option>
+                        <option value="fr">FR</option>
+                        <option value="es">ES</option>
+                        <option value="de">DE</option>
+                        <option value="it">IT</option>
+                    </select>
                     <textarea
                         class="decklist-textarea"
                         id="decklistInput"
@@ -652,12 +665,10 @@
             let cards = [];
             let showPreviewGuides = true;
             let showPdfGuides = false;
+            let currentLang = "en";
 
-            const lang = { EN: "EN", FR: "FR", ES: "ES", DE: "DE", IT: "IT" };
-            let currentLang = lang.EN;
-
-            const imgUrl = `https://img.altered-db.com/cards/${currentLang.toLowerCase()}/CORE/`;
-
+            const selectLang = document.getElementById("selectLang");
+            let imgUrl = `https://img.altered-db.com/cards`;
             const decklistInput = document.getElementById("decklistInput");
             const imgCount = document.getElementById("imgCount");
             const thumbStrip = document.getElementById("thumbStrip");
@@ -736,6 +747,12 @@
                 renderPreview();
             });
 
+            // --- Language
+            selectLang.addEventListener("change", () => {
+                currentLang = selectLang.value;
+                renderPreview();
+            });
+
             function updateUI() {
                 const n = cards.length;
                 const pages = Math.ceil(n / 9);
@@ -808,7 +825,9 @@
                   color:var(--ink-3); text-align:center; padding:4px;
                   word-break:break-word; line-height:1.4; pointer-events:none;
                 `;
-                            const img = imgUrl + `${cards[idx]}.webp`;
+                            const img =
+                                imgUrl +
+                                `/${currentLang}/${cards[idx].split("_")[1]}/${cards[idx]}.webp`;
 
                             label.textContent = cards[idx];
                             slot.height = `298`;
@@ -852,7 +871,9 @@
                             if (idx >= cards.length) continue;
                             const x = 10.5 + c * cardW;
                             const y = 16.5 + r * cardH;
-                            const logo = imgUrl + `${cards[idx]}.webp`;
+                            const logo =
+                                imgUrl +
+                                `/${currentLang}/${cards[idx].split("_")[1]}/${cards[idx]}.webp`;
 
                             // Card placeholder rectangle
                             doc.addImage(logo, "PNG", x, y, cardW, cardH);
@@ -879,6 +900,7 @@
             // ── Clear
             btnClear.addEventListener("click", () => {
                 decklistInput.value = "";
+                selectLang.selectedIndex = "0";
                 cards = [];
 
                 parseError.textContent = "";
