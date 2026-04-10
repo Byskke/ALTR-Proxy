@@ -57,6 +57,8 @@ Example: `ALT_CORE_B_AX_02_C`
 | [jsPDF 2.5.1](https://github.com/parallax/jsPDF) | PDF generation |
 | [DM Sans / DM Mono](https://fonts.google.com/) | Typography |
 | Vanilla JS | All logic — no framework |
+| Github Pages | Display a repository as website |
+| Netlify | Worker to manage CORS |
 
 ---
 
